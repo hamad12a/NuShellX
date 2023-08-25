@@ -1,0 +1,18 @@
+interface tqli
+    module  procedure tqli4,tqli8
+end interface tqli
+
+interface  pythag
+    module  procedure pythag4,pythag8
+end interface pythag
+
+interface  tred2
+    module procedure tred24,tred28
+end interface tred2
+
+interface  indexx
+    module  procedure indexx4,indexx8
+end interface indexx
+
+contains
+

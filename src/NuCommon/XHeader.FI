@@ -1,0 +1,24 @@
+! Sun    
+!    write(dev,*) ' SunShell V1.0 R1.000'
+!    write(dev,*)
+!    write(dev,*) ' W.D.M. Rae, Garsington, Oxford 2007'
+!    write(dev,*)
+!    write(dev,*) ' Based on NuShell code by W.D.M. Rae, Garsington, Oxford, UK, 2006/7'
+!    write(dev,*)
+! end Sun
+! NuShell
+    write(dev,*) ' NuShellX V4.0 R2.003'
+    write(dev,*)
+    write(dev,*) ' W.D.M. Rae, Garsington, Oxford 2008'
+    write(dev,*)
+    write(dev,*) ' Uses NuShell code by W.D.M. Rae, Garsington, Oxford, UK, 2006/7'
+    write(dev,*)
+! end NuShell
+! NuShell@MSU
+!    write(dev,*) ' NuShell@MSU V1.0 R1.000'
+!    write(dev,*)
+!    write(dev,*) ' B.A. Brown  and W.D.M. Rae 2007'
+!    write(dev,*)
+!    write(dev,*) ' Based on NuShell code by W.D.M. Rae, Garsington, Oxford, UK, 2006/7'
+!    write(dev,*)
+! end NuShell@MSU

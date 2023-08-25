@@ -1,0 +1,15 @@
+interface dot
+    module procedure dot44,dot48,dot84,dot88, &
+                     doti44,doti48,doti84,doti88
+end interface dot
+
+interface orthogonalise
+    module procedure  orthogonalise4,orthogonalise8, &
+                      orthogonalisep4,orthogonalisep8, &
+                      orthogonalisei4,orthogonalisei8, &
+                      orthogonalisei4ii,orthogonalisei8ii, &
+                      orthogonalise4ii,orthogonalise8ii
+end interface orthogonalise
+
+contains
+

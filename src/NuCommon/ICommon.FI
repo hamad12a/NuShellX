@@ -1,0 +1,1192 @@
+module Extra
+
+!   Intel
+use IFPORT
+use IFCORE
+!   end Intel
+!   Sun
+!    include 'system.inc'
+!   end Sun
+implicit none
+
+! Intel
+character(len=7)::pBasis='NuBasis'
+character(len=6)::pProj='NuProj'
+character(len=6)::pOper='NuOper'
+character(len=8)::pMatrix='NuMatrix'
+character(len=9)::pLanczos='NuLanczos'
+character(len=6)::pOrth='NuOrth'
+character(len=7)::pBlock='NuBlock'
+character(len=6)::pMvec='NuMvec'
+character(len=4)::pMe='NuMe'
+character(len=6)::pMbme='NuMbme'
+character(len=6)::pObme='NuObme'
+character(len=6)::pTbme='NuTbme'
+character(len=6)::pTpsf='NuTpsf'
+character(len=7)::pTramp='NuTramp'
+character(len=7)::pTrans='NuTrans'
+character(len=9)::pCluste='NuCluster'
+character(len=7)::pClamp='NuClamp'
+character(len=9)::pPSLevel='NuPSLevel'
+! end Intel
+!Sun
+!character(len=8)::pBasis='sunbasis'
+!character(len=7)::pProj='sunproj'
+!character(len=7)::pOper='sunoper'
+!character(len=9)::pMatrix='sunmatrix'
+!character(len=10)::pLanczos='sunlanczos'
+!character(len=7)::pOrth='sunorth'
+!character(len=8)::pBlock='sunblock'
+!character(len=7)::pMvec='sunmvec'
+!character(len=5)::pMe='sunme'
+!character(len=7)::pMbme='sunmbme'
+!character(len=7)::pObme='sunobme'
+!character(len=7)::pTbme='suntbme'
+!character(len=7)::pTpsf='suntpsf'
+!character(len=8)::pTramp='suntramp'
+!character(len=8)::pTrans='suntrans'
+!character(len=10)::pCluste='suncluster'
+!character(len=7)::pClamp='sunclamp'
+!character(len=10)::pPSLevel='sunpslevel'
+! end Sun
+
+contains
+
+    subroutine get_cmd_arg(n,buffer,status)
+    implicit none
+    integer,intent(out)::status
+    integer,intent(in)::n
+    character(len=*)::buffer
+
+    if (n>IARGC()) then
+        status=-1
+        return
+    end if
+    
+    call getarg(n,buffer)
+
+    status=len_trim(buffer)
+
+    end subroutine get_cmd_arg
+    
+    function get_env_v(chvar,chval)
+    implicit none
+    character(len=*),intent(in)::chvar
+    character(len=*),intent(out)::chval
+    integer:: get_env_v
+    
+    call getenv(chvar,chval)
+    chval=adjustl(chval)
+    get_env_v=len_trim(chval)
+    
+    end function get_env_v
+    
+    function run(prog,cmdline)
+    implicit none
+    character(len=*),intent(in):: prog,cmdline
+    integer(kind=2):: run
+    integer::res,sh
+    
+!   Intel
+
+    run=runqq(prog,cmdline)
+    
+!   end Intel    
+    
+!   Sun
+
+!    res=sh(prog//' '//cmdline)
+!    run=0
+
+!   end Sun
+    end function run    
+    
+    subroutine get_next_file(filew,filename,done)
+    implicit none
+    character(len=5),intent(in)::filew
+    character(len=*),intent(out)::filename
+    logical,intent(out):: done
+    logical,save:: first=.true.
+    integer:: sh,res
+!   Intel
+    CHARACTER(80) file
+    INTEGER(KIND=INT_PTR_KIND( )),save:: handle
+    TYPE(FILE$INFO) info
+    INTEGER(4) length
+    done=.false.
+    file(1:5)=filew
+    if (first) then
+        handle = FILE$FIRST
+        first=.false.
+    end if
+2   length = GETFILEINFOQQ(file, info, handle)
+    IF (handle .EQ. FILE$LAST) GO TO 20
+    IF ((handle .EQ. FILE$ERROR)) THEN
+        SELECT CASE (GETLASTERRORQQ( ))
+           CASE (ERR$NOMEM)
+             WRITE (*,*) 'Out of memory'
+           CASE (ERR$NOENT)
+             WRITE (*,*) ' File not found'
+             STOP
+           CASE DEFAULT
+             WRITE (*,*) 'Invalid file or path name'
+             STOP
+        END SELECT
+    END IF
+    if (length > len(filename)) then
+        print *, ' Filename too long',length,info%name
+        stop
+    end if 
+    filename=info%name(1:length)
+    return  
+20  done=.true.
+    return    
+!   end Intel
+!   Sun
+!    done=.false.
+!    if (first) then
+!        res=sh('ls '//filew//' > Files.out')
+!        open(unit=1,file='Files.out')
+!        first=.false.
+!    end if
+!    read(1,*,end=20,err=30) filename
+!    filename=adjustl(filename)
+!    return
+!20  done=.true.
+!    return
+!30  print *,' Error reading Files.out'
+!    stop
+!   end Sun
+
+end subroutine get_next_file
+
+    function deletf(file,file2)
+    implicit none
+    character(len=*),intent(in)::file,file2
+    integer:: deletf,sh
+    
+!   Intel
+    deletf = SYSTEM('del '//file//' > '//file2)
+    write(56,'(a23)') 'del '//file//' > '//file2
+!   end Intel
+!   Sun
+!    deletf = sh('rm '//file//' > '//file2)
+!    write(56,'(a23)') 'rm '//file//' > '//file2
+!   end Sun
+    
+    end function deletf
+        
+end module extra
+
+module TriDiag
+
+INTEGER,PARAMETER ::M=7,NSTACK=50
+
+include 'ITriDiag.FI'
+!include 'STriDiag.FI'
+
+      PURE SUBROUTINE tqli4(d,e,n,np,z,maxiter)
+      INTEGER,INTENT(in):: n,np
+      REAL(kind=4),INTENT(inout):: d(:),e(:),z(:,:)
+      integer,intent(in)::maxiter
+!U    USES pythag
+      INTEGER i,k,l,m
+      REAL(kind=4) b,c,dd,f,g,p,r,s
+      do 11 i=2,n
+        e(i-1)=e(i)
+11    continue
+      e(n)=real(0,4)
+      do 15 l=1,n
+        iter=0
+1       do 12 m=l,n-1
+          dd=abs(d(m))+abs(d(m+1))
+          if (abs(e(m))+dd.eq.dd) goto 2
+12      continue
+        m=n
+2       if(m.ne.l)then
+          if(iter.eq.maxiter) then
+!          print *, ' Too many iterations in tqli'
+!          stop !pause 'too many iterations in tqli'
+                return
+          end if
+          iter=iter+1
+          g=(d(l+1)-d(l))/(real(2,4)*e(l))
+          r=pythag(g,real(1,4))
+          g=d(m)-d(l)+e(l)/(g+sign(r,g))
+          s=real(1,4)
+          c=real(1,4)
+          p=real(0,4)
+          do 14 i=m-1,l,-1
+            f=s*e(i)
+            b=c*e(i)
+            r=pythag(f,g)
+            e(i+1)=r
+            if(r.eq.0.)then
+              d(i+1)=d(i+1)-p
+              e(m)=real(0,4)
+              goto 1
+            endif
+            s=f/r
+            c=g/r
+            g=d(i+1)-p
+            r=(d(i)-g)*s+real(2,4)*c*b
+            p=s*r
+            d(i+1)=g+p
+            g=c*r-b
+!     Omit lines from here ...
+            do 13 k=1,n
+              f=z(k,i+1)
+              z(k,i+1)=s*z(k,i)+c*f
+              z(k,i)=c*z(k,i)-s*f
+13          continue
+!     ... to here when finding only eigenvalues.
+14        continue
+          d(l)=d(l)-p
+          e(l)=g
+          e(m)=real(0,4)
+          goto 1
+        endif
+15    continue
+      return
+      END SUBROUTINE tqli4
+!  (C) Copr. 1986-92 Numerical Recipes Software 7$-i%.
+      PURE SUBROUTINE tqli8(d,e,n,np,z,maxiter)
+      INTEGER,INTENT(in):: n,np
+      REAL(kind=8),INTENT(inout):: d(:),e(:),z(:,:)
+      integer,intent(in)::maxiter
+!U    USES pythag
+      INTEGER i,k,l,m
+      REAL(kind=8) b,c,dd,f,g,p,r,s
+      do 11 i=2,n
+        e(i-1)=e(i)
+11    continue
+      e(n)=real(0,8)
+      do 15 l=1,n
+        iter=0
+1       do 12 m=l,n-1
+          dd=abs(d(m))+abs(d(m+1))
+          if (abs(e(m))+dd.eq.dd) goto 2
+12      continue
+        m=n
+2       if(m.ne.l)then
+          if(iter.eq.maxiter) then
+!          print *, ' Too many iterations in tqli'
+!          stop !pause 'too many iterations in tqli'
+                return
+          end if
+          iter=iter+1
+          g=(d(l+1)-d(l))/(real(2,8)*e(l))
+          r=pythag(g,real(1,8))
+          g=d(m)-d(l)+e(l)/(g+sign(r,g))
+          s=real(1,8)
+          c=real(1,8)
+          p=real(0,8)
+          do 14 i=m-1,l,-1
+            f=s*e(i)
+            b=c*e(i)
+            r=pythag(f,g)
+            e(i+1)=r
+            if(r.eq.0.)then
+              d(i+1)=d(i+1)-p
+              e(m)=real(0,8)
+              goto 1
+            endif
+            s=f/r
+            c=g/r
+            g=d(i+1)-p
+            r=(d(i)-g)*s+real(2,8)*c*b
+            p=s*r
+            d(i+1)=g+p
+            g=c*r-b
+!     Omit lines from here ...
+            do 13 k=1,n
+              f=z(k,i+1)
+              z(k,i+1)=s*z(k,i)+c*f
+              z(k,i)=c*z(k,i)-s*f
+13          continue
+!     ... to here when finding only eigenvalues.
+14        continue
+          d(l)=d(l)-p
+          e(l)=g
+          e(m)=real(0,4)
+          goto 1
+        endif
+15    continue
+      return
+      END SUBROUTINE tqli8
+!  (C) Copr. 1986-92 Numerical Recipes Software 7$-i%.
+      PURE FUNCTION pythag4(a,b)
+      REAL(kind=4),intent(in):: a,b
+      REAL(kind=4) absa,absb,pythag4
+      absa=abs(a)
+      absb=abs(b)
+      if(absa.gt.absb)then
+        pythag4=absa*sqrt(1.+(absb/absa)**2)
+      else
+        if(absb.eq.real(0,4))then
+          pythag4=real(0,4)
+        else
+          pythag4=absb*sqrt(real(1,4)+(absa/absb)**2)
+        endif
+      endif
+      return
+      END FUNCTION pythag4
+!  (C) Copr. 1986-92 Numerical Recipes Software 7$-i%.
+      PURE FUNCTION pythag8(a,b)
+      REAL(kind=8),intent(in):: a,b
+      REAL(kind=8) absa,absb,pythag8
+      absa=abs(a)
+      absb=abs(b)
+      if(absa.gt.absb)then
+        pythag8=absa*sqrt(1.+(absb/absa)**2)
+      else
+        if(absb.eq.real(0,8))then
+          pythag8=real(0,8)
+        else
+          pythag8=absb*sqrt(real(1,8)+(absa/absb)**2)
+        endif
+      endif
+      return
+      END FUNCTION pythag8
+!  (C) Copr. 1986-92 Numerical Recipes Software 7$-i%.
+      PURE SUBROUTINE tred24(a,n,np,d,e)
+      INTEGER,intent(in):: n,np
+      REAL(kind=4),intent(inout):: a(:,:),d(:),e(:)
+      INTEGER i,j,k,l
+      REAL(kind=4) f,g,h,hh,scale
+      do 18 i=n,2,-1
+        l=i-1
+        h=real(0,4)
+        scale=real(0,4)
+        if(l.gt.1)then
+          do 11 k=1,l
+            scale=scale+abs(a(i,k))
+11        continue
+          if(scale.eq.real(0,4))then
+            e(i)=a(i,l)
+          else
+            do 12 k=1,l
+              a(i,k)=a(i,k)/scale
+              h=h+a(i,k)*a(i,k)
+12          continue
+            f=a(i,l)
+            g=-sign(sqrt(h),f)
+            e(i)=scale*g
+            h=h-f*g
+            a(i,l)=f-g
+            f=real(0,4)
+            do 15 j=1,l
+!     Omit following line if finding only eigenvalues
+              a(j,i)=a(i,j)/h
+              g=real(0,4)
+              do 13 k=1,j
+                g=g+a(j,k)*a(i,k)
+13            continue
+              do 14 k=j+1,l
+                g=g+a(k,j)*a(i,k)
+14            continue
+              e(j)=g/h
+              f=f+e(j)*a(i,j)
+15          continue
+            hh=f/(h+h)
+            do 17 j=1,l
+              f=a(i,j)
+              g=e(j)-hh*f
+              e(j)=g
+              do 16 k=1,j
+                a(j,k)=a(j,k)-f*e(k)-g*a(i,k)
+16            continue
+17          continue
+          endif
+        else
+          e(i)=a(i,l)
+        endif
+        d(i)=h
+18    continue
+!     Omit following line if finding only eigenvalues.
+      d(1)=real(0,4)
+      e(1)=real(0,4)
+      do 24 i=1,n
+!     Delete lines from here ...
+        l=i-1
+        if(d(i).ne.real(0,4))then
+          do 22 j=1,l
+            g=real(0,4)
+            do 19 k=1,l
+              g=g+a(i,k)*a(k,j)
+19          continue
+            do 21 k=1,l
+              a(k,j)=a(k,j)-g*a(k,i)
+21          continue
+22        continue
+        endif
+!     ... to here when finding only eigenvalues.
+        d(i)=a(i,i)
+!     Also delete lines from here ...
+        a(i,i)=real(1,4)
+        do 23 j=1,l
+          a(i,j)=real(0,4)
+          a(j,i)=real(0,4)
+23      continue
+!     ... to here when finding only eigenvalues.
+24    continue
+      return
+      END SUBROUTINE tred24
+!  (C) Copr. 1986-92 Numerical Recipes Software 7$-i%.
+      PURE SUBROUTINE tred28(a,n,np,d,e)
+      INTEGER,intent(in):: n,np
+      REAL(kind=8),intent(inout):: a(:,:),d(:),e(:)
+      INTEGER i,j,k,l
+      REAL(kind=8) f,g,h,hh,scale
+      do 18 i=n,2,-1
+        l=i-1
+        h=real(0,8)
+        scale=real(0,8)
+        if(l.gt.1)then
+          do 11 k=1,l
+            scale=scale+abs(a(i,k))
+11        continue
+          if(scale.eq.real(0,8))then
+            e(i)=a(i,l)
+          else
+            do 12 k=1,l
+              a(i,k)=a(i,k)/scale
+              h=h+a(i,k)**2
+12          continue
+            f=a(i,l)
+            g=-sign(sqrt(h),f)
+            e(i)=scale*g
+            h=h-f*g
+            a(i,l)=f-g
+            f=real(0,8)
+            do 15 j=1,l
+!     Omit following line if finding only eigenvalues
+              a(j,i)=a(i,j)/h
+              g=real(0,8)
+              do 13 k=1,j
+                g=g+a(j,k)*a(i,k)
+13            continue
+              do 14 k=j+1,l
+                g=g+a(k,j)*a(i,k)
+14            continue
+              e(j)=g/h
+              f=f+e(j)*a(i,j)
+15          continue
+            hh=f/(h+h)
+            do 17 j=1,l
+              f=a(i,j)
+              g=e(j)-hh*f
+              e(j)=g
+              do 16 k=1,j
+                a(j,k)=a(j,k)-f*e(k)-g*a(i,k)
+16            continue
+17          continue
+          endif
+        else
+          e(i)=a(i,l)
+        endif
+        d(i)=h
+18    continue
+!     Omit following line if finding only eigenvalues.
+      d(1)=real(0,8)
+      e(1)=real(0,8)
+      do 24 i=1,n
+!     Delete lines from here ...
+        l=i-1
+        if(d(i).ne.real(0,4))then
+          do 22 j=1,l
+            g=real(0,8)
+            do 19 k=1,l
+              g=g+a(i,k)*a(k,j)
+19          continue
+            do 21 k=1,l
+              a(k,j)=a(k,j)-g*a(k,i)
+21          continue
+22        continue
+        endif
+!     ... to here when finding only eigenvalues.
+        d(i)=a(i,i)
+!     Also delete lines from here ...
+        a(i,i)=real(1,8)
+        do 23 j=1,l
+          a(i,j)=real(0,8)
+          a(j,i)=real(0,8)
+23      continue
+!     ... to here when finding only eigenvalues.
+24    continue
+      return
+      END SUBROUTINE tred28
+!  (C) Copr. 1986-92 Numerical Recipes Software 7$-i%.
+      PURE SUBROUTINE indexx4(n,arr,indx)
+      INTEGER ,INTENT(IN)::n
+      INTEGER, INTENT(OUT):: indx(n)
+      REAL(kind=4),intent(in):: arr(n)
+      INTEGER i,indxt,ir,itemp,j,jstack,k,l,istack(NSTACK)
+      REAL(kind=4) a
+      do 11 j=1,n
+        indx(j)=j
+11    continue
+      jstack=0
+      l=1
+      ir=n
+1     if(ir-l.lt.M)then
+        do 13 j=l+1,ir
+          indxt=indx(j)
+          a=arr(indxt)
+          do 12 i=j-1,1,-1
+            if(arr(indx(i)).le.a)goto 2
+            indx(i+1)=indx(i)
+12        continue
+          i=0
+2         indx(i+1)=indxt
+13      continue
+        if(jstack.eq.0)return
+        ir=istack(jstack)
+        l=istack(jstack-1)
+        jstack=jstack-2
+      else
+        k=(l+ir)/2
+        itemp=indx(k)
+        indx(k)=indx(l+1)
+        indx(l+1)=itemp
+        if(arr(indx(l+1)).gt.arr(indx(ir)))then
+          itemp=indx(l+1)
+          indx(l+1)=indx(ir)
+          indx(ir)=itemp
+        endif
+        if(arr(indx(l)).gt.arr(indx(ir)))then
+          itemp=indx(l)
+          indx(l)=indx(ir)
+          indx(ir)=itemp
+        endif
+        if(arr(indx(l+1)).gt.arr(indx(l)))then
+          itemp=indx(l+1)
+          indx(l+1)=indx(l)
+          indx(l)=itemp
+        endif
+        i=l+1
+        j=ir
+        indxt=indx(l)
+        a=arr(indxt)
+3       continue
+          i=i+1
+        if(arr(indx(i)).lt.a)goto 3
+4       continue
+          j=j-1
+        if(arr(indx(j)).gt.a)goto 4
+        if(j.lt.i)goto 5
+        itemp=indx(i)
+        indx(i)=indx(j)
+        indx(j)=itemp
+        goto 3
+5       indx(l)=indx(j)
+        indx(j)=indxt
+        jstack=jstack+2
+        if(jstack.gt.NSTACK) RETURN
+        if(ir-i+1.ge.j-l)then
+          istack(jstack)=ir
+          istack(jstack-1)=i
+          ir=j-1
+        else
+          istack(jstack)=j-1
+          istack(jstack-1)=l
+          l=i
+        endif
+      endif
+      goto 1
+      END SUBROUTINE indexx4
+!  (C) Copr. 1986-92 Numerical Recipes Software 7$-i%.
+      PURE SUBROUTINE indexx8(n,arr,indx)
+      INTEGER ,INTENT(IN)::n
+      INTEGER, INTENT(OUT):: indx(n)
+      REAL(kind=8),intent(in):: arr(:)
+      INTEGER i,indxt,ir,itemp,j,jstack,k,l,istack(NSTACK)
+      REAL(kind=8) a
+      do 11 j=1,n
+        indx(j)=j
+11    continue
+      jstack=0
+      l=1
+      ir=n
+1     if(ir-l.lt.M)then
+        do 13 j=l+1,ir
+          indxt=indx(j)
+          a=arr(indxt)
+          do 12 i=j-1,1,-1
+            if(arr(indx(i)).le.a)goto 2
+            indx(i+1)=indx(i)
+12        continue
+          i=0
+2         indx(i+1)=indxt
+13      continue
+        if(jstack.eq.0)return
+        ir=istack(jstack)
+        l=istack(jstack-1)
+        jstack=jstack-2
+      else
+        k=(l+ir)/2
+        itemp=indx(k)
+        indx(k)=indx(l+1)
+        indx(l+1)=itemp
+        if(arr(indx(l+1)).gt.arr(indx(ir)))then
+          itemp=indx(l+1)
+          indx(l+1)=indx(ir)
+          indx(ir)=itemp
+        endif
+        if(arr(indx(l)).gt.arr(indx(ir)))then
+          itemp=indx(l)
+          indx(l)=indx(ir)
+          indx(ir)=itemp
+        endif
+        if(arr(indx(l+1)).gt.arr(indx(l)))then
+          itemp=indx(l+1)
+          indx(l+1)=indx(l)
+          indx(l)=itemp
+        endif
+        i=l+1
+        j=ir
+        indxt=indx(l)
+        a=arr(indxt)
+3       continue
+          i=i+1
+        if(arr(indx(i)).lt.a)goto 3
+4       continue
+          j=j-1
+        if(arr(indx(j)).gt.a)goto 4
+        if(j.lt.i)goto 5
+        itemp=indx(i)
+        indx(i)=indx(j)
+        indx(j)=itemp
+        goto 3
+5       indx(l)=indx(j)
+        indx(j)=indxt
+        jstack=jstack+2
+        if(jstack.gt.NSTACK) RETURN
+        if(ir-i+1.ge.j-l)then
+          istack(jstack)=ir
+          istack(jstack-1)=i
+          ir=j-1
+        else
+          istack(jstack)=j-1
+          istack(jstack-1)=l
+          l=i
+        endif
+      endif
+      goto 1
+      END SUBROUTINE indexx8
+!  (C) Copr. 1986-92 Numerical Recipes Software 7$-i%.
+
+end module TriDiag
+
+module DotProduct
+
+implicit none
+
+include 'IDotProduct.FI'
+!include 'SDotProduct.FI'
+
+    pure function dot44(coef1,coef2,dim)
+    implicit none
+    real(kind=8)::dot44
+    real(kind=4),dimension(:),intent(in):: coef1
+    real(kind=4),dimension(:),intent(in):: coef2
+    integer,intent(in)::dim
+    integer::i
+    dot44=real(0,8)
+    do i=1,dim
+        dot44=dot44+coef1(i)*coef2(i)
+    end do
+    
+    end function dot44
+    
+    pure function dot88(coef1,coef2,dim)
+    implicit none
+    real(kind=8)::dot88
+    real(kind=8),dimension(:),intent(in):: coef1
+    real(kind=8),dimension(:),intent(in):: coef2
+    integer,intent(in)::dim
+    integer::i
+    dot88=real(0,8)
+    do i=1,dim
+        dot88=dot88+coef1(i)*coef2(i)
+    end do
+    
+    end function dot88
+    
+    pure function dot48(coef1,coef2,dim)
+    implicit none
+    real(kind=8)::dot48
+    real(kind=4),dimension(:),intent(in):: coef1
+    real(kind=8),dimension(:),intent(in):: coef2
+    integer,intent(in)::dim
+    integer::i
+    dot48=real(0,8)
+    do i=1,dim
+        dot48=dot48+coef1(i)*coef2(i)
+    end do
+    
+    end function dot48
+            
+    pure function dot84(coef1,coef2,dim)
+    implicit none
+    real(kind=8)::dot84
+    real(kind=8),dimension(:),intent(in):: coef1
+    real(kind=4),dimension(:),intent(in):: coef2
+    integer,intent(in)::dim
+    integer::i
+    dot84=real(0,8)
+    do i=1,dim
+        dot84=dot84+coef1(i)*coef2(i)
+    end do
+    
+    end function dot84
+                
+    pure subroutine orthogonalise4(n,vector,zz,dim)
+        implicit none
+        integer,intent(in):: n,dim
+        real(kind=8):: ovl
+        real(kind=4),intent(inout),dimension(:):: zz
+        real(kind=4),intent(in),dimension(:,:):: vector
+        integer:: i
+        do i=1,n
+            ovl=dot44(vector(1:dim,i),zz(1:dim),dim)
+            zz(1:dim)=zz(1:dim)-ovl*vector(1:dim,i)
+        end do
+        
+    end subroutine orthogonalise4
+    
+    pure subroutine orthogonalisep4(n,vector,zz,dim,ovl)
+        implicit none
+        integer,intent(in):: n,dim
+        real(kind=4),intent(out),dimension(:):: ovl
+        real(kind=4),intent(inout),dimension(:):: zz
+        real(kind=4),intent(in),dimension(:,:):: vector
+        integer:: i
+!$OMP PARALLEL PRIVATE(i)
+!$OMP DO        
+        do i=1,n
+            ovl(i)=dot44(vector(1:dim,i),zz(1:dim),dim)
+        end do
+!$OMP END PARALLEL        
+        do i=1,n
+            zz(1:dim)=zz(1:dim)-ovl(i)*vector(1:dim,i)
+        end do
+        
+    end subroutine orthogonalisep4
+        
+    pure subroutine orthogonalise8(n,vector,zz,dim)
+        implicit none
+        integer,intent(in):: n,dim
+        real(kind=8):: ovl
+        real(kind=8),intent(inout),dimension(:):: zz
+        real(kind=8),intent(in),dimension(:,:):: vector
+        integer:: i
+        do i=1,n
+            ovl=dot88(vector(1:dim,i),zz(1:dim),dim)
+            zz(1:dim)=zz(1:dim)-ovl*vector(1:dim,i)
+        end do
+        
+    end subroutine orthogonalise8
+
+    pure subroutine orthogonalisep8(n,vector,zz,dim,ovl)
+        implicit none
+        integer,intent(in):: n,dim
+        real(kind=8),intent(out),dimension(:):: ovl
+        real(kind=8),intent(inout),dimension(:):: zz
+        real(kind=8),intent(in),dimension(:,:):: vector
+        integer:: i
+!$OMP PARALLEL PRIVATE(i)
+!$OMP DO        
+        do i=1,n
+            ovl(i)=dot88(vector(1:dim,i),zz(1:dim),dim)
+        end do
+!$OMP END PARALLEL        
+        do i=1,n
+            zz(1:dim)=zz(1:dim)-ovl(i)*vector(1:dim,i)
+        end do
+        
+    end subroutine orthogonalisep8
+                
+    pure function doti44(coef1,coef2,rnorm2,dim)
+    implicit none
+    real(kind=8)::doti44
+    real(kind=4),dimension(:),intent(in):: coef1
+    real(kind=4),dimension(:),intent(in):: coef2
+    real(kind=4),dimension(:),intent(in):: rnorm2
+    integer,intent(in)::dim
+    integer::i
+    doti44=real(0,8)
+    do i=1,dim
+        doti44=doti44+coef1(i)*coef2(i)*rnorm2(i)
+    end do
+    
+    end function doti44
+    
+    pure function doti88(coef1,coef2,rnorm2,dim)
+    implicit none
+    real(kind=8)::doti88
+    real(kind=8),dimension(:),intent(in):: coef1
+    real(kind=8),dimension(:),intent(in):: coef2
+    real(kind=8),dimension(:),intent(in):: rnorm2
+    integer,intent(in)::dim
+    integer::i
+    doti88=real(0,8)
+    do i=1,dim
+        doti88=doti88+coef1(i)*coef2(i)*rnorm2(i)
+    end do
+    
+    end function doti88
+    
+    pure function doti48(coef1,coef2,rnorm2,dim)
+    implicit none
+    real(kind=8)::doti48
+    real(kind=4),dimension(:),intent(in):: coef1
+    real(kind=8),dimension(:),intent(in):: coef2
+    real(kind=8),dimension(:),intent(in):: rnorm2
+    integer,intent(in)::dim
+    integer::i
+    doti48=real(0,8)
+    do i=1,dim
+        doti48=doti48+coef1(i)*coef2(i)*rnorm2(i)
+    end do
+    
+    end function doti48
+            
+    pure function doti84(coef1,coef2,rnorm2,dim)
+    implicit none
+    real(kind=8)::doti84
+    real(kind=8),dimension(:),intent(in):: coef1
+    real(kind=8),dimension(:),intent(in):: rnorm2
+    real(kind=4),dimension(:),intent(in):: coef2
+    integer,intent(in)::dim
+    integer::i
+    doti84=real(0,8)
+    do i=1,dim
+        doti84=doti84+coef1(i)*coef2(i)*rnorm2(i)
+    end do
+    
+    end function doti84
+            
+    
+    pure subroutine orthogonalisei4(n,vector,zz,rnorm2,dim)
+        implicit none
+        integer,intent(in):: n,dim
+        real(kind=8):: ovl
+        real(kind=4),intent(inout),dimension(:):: zz
+        real(kind=4),intent(in),dimension(:,:):: vector
+        real(kind=4),dimension(:),intent(in):: rnorm2
+        integer:: i
+        do i=1,n
+            ovl=doti44(vector(1:dim,i),zz(1:dim),rnorm2(1:dim),dim)
+            zz(1:dim)=zz(1:dim)-ovl*vector(1:dim,i)
+        end do
+        
+    end subroutine orthogonalisei4
+        
+    pure subroutine orthogonalisei8(n,vector,zz,rnorm2,dim)
+        implicit none
+        integer,intent(in):: n,dim
+        real(kind=8):: ovl
+        real(kind=8),intent(inout),dimension(:):: zz
+        real(kind=8),intent(in),dimension(:,:):: vector
+        real(kind=8),dimension(:),intent(in):: rnorm2
+        integer:: i
+        do i=1,n
+            ovl=doti88(vector(1:dim,i),zz(1:dim),rnorm2(1:dim),dim)
+            zz(1:dim)=zz(1:dim)-ovl*vector(1:dim,i)
+        end do
+        
+    end subroutine orthogonalisei8
+        
+    pure subroutine orthogonalisei4ii(n,vector,zz,rnorm2,dim,ii)
+        implicit none
+        integer,intent(in):: n,dim,ii
+        real(kind=8):: ovl
+        real(kind=4),intent(inout),dimension(:):: zz
+        real(kind=4),intent(in),dimension(:,:,:):: vector
+        real(kind=4),dimension(:),intent(in):: rnorm2
+        integer:: i
+        do i=1,n
+            ovl=doti44(vector(1:dim,ii,i),zz(1:dim),rnorm2(1:dim),dim)
+            zz(1:dim)=zz(1:dim)-ovl*vector(1:dim,ii,i)
+        end do
+        
+    end subroutine orthogonalisei4ii
+        
+    pure subroutine orthogonalisei8ii(n,vector,zz,rnorm2,dim,ii)
+        implicit none
+        integer,intent(in):: n,dim,ii
+        real(kind=8):: ovl
+        real(kind=8),intent(inout),dimension(:):: zz
+        real(kind=8),intent(in),dimension(:,:,:):: vector
+        real(kind=8),dimension(:),intent(in):: rnorm2
+        integer:: i
+        do i=1,n
+            ovl=doti88(vector(1:dim,ii,i),zz(1:dim),rnorm2(1:dim),dim)
+            zz(1:dim)=zz(1:dim)-ovl*vector(1:dim,ii,i)
+        end do
+        
+    end subroutine orthogonalisei8ii
+        
+    pure subroutine orthogonalise4ii(n,vector,zz,dim,ii)
+        implicit none
+        integer,intent(in):: n,dim,ii
+        real(kind=8):: ovl
+        real(kind=4),intent(inout),dimension(:):: zz
+        real(kind=4),intent(in),dimension(:,:,:):: vector
+        integer:: i
+        do i=1,n
+            ovl=dot44(vector(1:dim,ii,i),zz(1:dim),dim)
+            zz(1:dim)=zz(1:dim)-ovl*vector(1:dim,ii,i)
+        end do
+        
+    end subroutine orthogonalise4ii
+        
+    pure subroutine orthogonalise8ii(n,vector,zz,dim,ii)
+        implicit none
+        integer,intent(in):: n,dim,ii
+        real(kind=8):: ovl
+        real(kind=8),intent(inout),dimension(:):: zz
+        real(kind=8),intent(in),dimension(:,:,:):: vector
+        integer:: i
+        do i=1,n
+            ovl=dot88(vector(1:dim,ii,i),zz(1:dim),dim)
+            zz(1:dim)=zz(1:dim)-ovl*vector(1:dim,ii,i)
+        end do
+        
+    end subroutine orthogonalise8ii
+        
+end module DotProduct
+            
+module Clebschg
+implicit none
+
+interface clebg
+    module procedure clebg8
+end interface
+
+integer,parameter:: max_table = 200          !max dimension for CG table
+
+contains
+
+include 'IClebg.FI'
+!no Sun include
+
+      FUNCTION clebg4(IA,IB,IC,ID,IE,IF)                                             
+      IMPLICIT NONE
+      integer,parameter::RC=4
+      LOGICAL:: FIRST=.TRUE.
+      REAL(KIND=RC):: clebg4,FN,FB,FC2
+      REAL(KIND=RC),DIMENSION(max_table):: FACLOG
+      INTEGER,INTENT(IN):: IA,IB,IC,ID,IE,IF                           
+      INTEGER:: N,K1,K2,K3,IABCP,IABC,IBCA,ICAB,IAMD,IAPD
+      INTEGER:: IBPE,IBME,ICPF,ICMF,NZMIC2,NZMIC3,NZMI,NZMX,NZ,NZM1,NZT1,NZT2,NZT3,NZT4,NZT5
+      REAL(KIND=RC):: SQFCLG,S1,TERMLG,SSTERM          
+
+
+      IF(.NOT.FIRST) GO TO 10
+!
+!  SET UP FOR clebg, N!=EXP(FACLOG(N-1))
+!
+      FACLOG(1)=REAL(0,RC)
+      FACLOG(2)=REAL(0,RC) 
+      FN=REAL(1,RC)
+      DO N=3,max_table
+      FN=FN+REAL(1,RC) 
+      FACLOG(N)=FACLOG(N-1)+LOG(FN) 
+      END DO
+      FIRST = .FALSE.
+
+10    clebg4=REAL(0,RC)                                                       
+      IF(ID+IE-IF /= 0) GO TO 1000                                    
+      K1=IA+IB+IC                                                   
+      IF(K1-2*(K1/2) /= 0) GO TO 1000                                 
+      K1=IA+IB-IC                                                   
+      K2=IC-ABS(IB-IA)                                             
+      K3=MIN(K1,K2)                                                
+      IF(K3 < 0) GO TO 1000                                           
+      IF((-1)**(IB+IE) <  0) GO TO 1000                               
+      IF((-1)**(IC+IF) <  0) GO TO 1000                               
+      IF(IA-ABS(ID) < 0) GO TO 1000                                  
+      IF(IB-ABS(IE) < 0) GO TO 1000                                 
+      IF(IC-ABS(IF) < 0) GO TO 1000                                  
+      IF(IA == 0) GO TO 175                                                   
+      IF(IA > 0) GO TO 165        
+      GO TO 1000                                   
+  165 IF(IB == 0) GO TO 175                                                      
+      IF(IB > 0) GO TO 170                                           
+      GO TO 1000
+  170 IF(IC == 0) GO TO 180                                                   
+      IF(IC > 0) GO TO 250                                           
+      GO TO 1000
+  175 clebg4=REAL(1,RC)                                                       
+      GO TO 1000                                                    
+  180 FB=REAL(IB+1,RC)                                                       
+      clebg4=((-REAL(1,RC))**((IA-ID)/2))/ SQRT(FB)                         
+      GO TO 1000                                                    
+  250 FC2=REAL(IC+1,RC)                                                      
+      IABCP=(IA+IB+IC)/2+1                                          
+      IF(IABCP.GT.MAX_TABLE) GO TO 8000
+      IABC=IABCP-IC                                                 
+      IF(IABC.GT.MAX_TABLE) GO TO 8000
+      ICAB=IABCP-IB                                                 
+      IF(ICAB.GT.MAX_TABLE) GO TO 8000
+      IBCA=IABCP-IA                                                 
+      IF(IBCA.GT.MAX_TABLE) GO TO 8000
+      IAPD=(IA+ID)/2+1                                              
+      IF(IAPD.GT.MAX_TABLE) GO TO 8000
+      IAMD=IAPD-ID                                                  
+      IF(IAMD.GT.MAX_TABLE) GO TO 8000
+      IBPE=(IB+IE)/2+1                                              
+      IF(IBPE.GT.MAX_TABLE) GO TO 8000
+      IBME=IBPE-IE                                                  
+      IF(IBME.GT.MAX_TABLE) GO TO 8000
+      ICPF=(IC+IF)/2+1                                              
+      IF(ICPF.GT.MAX_TABLE) GO TO 8000
+      ICMF=ICPF-IF                                                  
+      IF(ICMF.GT.MAX_TABLE) GO TO 8000
+      SQFCLG=0.5  *(LOG(FC2)-FACLOG(IABCP+1) &                      
+           +FACLOG(IABC)+FACLOG(ICAB)+FACLOG(IBCA)  &               
+           +FACLOG(IAPD)+FACLOG(IAMD)+FACLOG(IBPE)   &              
+           +FACLOG(IBME)+FACLOG(ICPF)+FACLOG(ICMF))   
+      NZMIC2=(IB-IC-ID)/2                                           
+      NZMIC3=(IA-IC+IE)/2                                           
+      NZMI=MAX(0,NZMIC2,NZMIC3)+1                                  
+      NZMX=MIN(IABC,IAMD,IBPE)                                     
+      S1=REAL(1-2*MOD(NZMI-1,2) ,RC)                                         
+      DO  NZ=NZMI,NZMX                                           
+      IF(NZ.GT.MAX_TABLE) GO TO 8000
+      NZM1=NZ-1                                                     
+      NZT1=IABC-NZM1                                                
+      IF(NZT1.GT.MAX_TABLE) GO TO 8000
+      NZT2=IAMD-NZM1                                                
+      IF(NZT2.GT.MAX_TABLE) GO TO 8000
+      NZT3=IBPE-NZM1                                                
+      IF(NZT3.GT.MAX_TABLE) GO TO 8000
+      NZT4=NZ-NZMIC2                                                
+      IF(NZT4.GT.MAX_TABLE) GO TO 8000
+      NZT5=NZ-NZMIC3                                                
+      IF(NZT5.GT.MAX_TABLE) GO TO 8000
+      TERMLG=SQFCLG-FACLOG(NZ)-FACLOG(NZT1)-FACLOG(NZT2)    &        
+                -FACLOG(NZT3)-FACLOG(NZT4)-FACLOG(NZT5)            
+      SSTERM=S1* EXP(TERMLG)                                        
+      clebg4=clebg4+SSTERM                                                
+      S1=-S1
+      END DO                                                        
+                                    
+1000  RETURN                                                        
+8000  WRITE(6,8001)
+8001  FORMAT(1X,'INCREASE MAX_TABLE IN clebg')
+      STOP
+      END FUNCTION clebg4  
+                                                              
+      FUNCTION clebg8(IA,IB,IC,ID,IE,IF)                                             
+      IMPLICIT NONE
+      integer,parameter::RC=8
+      LOGICAL:: FIRST=.TRUE.
+      REAL(KIND=RC):: clebg8,FN,FB,FC2
+      REAL(KIND=RC),DIMENSION(max_table):: FACLOG
+      INTEGER,INTENT(IN):: IA,IB,IC,ID,IE,IF                           
+      INTEGER:: N,K1,K2,K3,IABCP,IABC,IBCA,ICAB,IAMD,IAPD
+      INTEGER:: IBPE,IBME,ICPF,ICMF,NZMIC2,NZMIC3,NZMI,NZMX,NZ,NZM1,NZT1,NZT2,NZT3,NZT4,NZT5
+      REAL(KIND=RC):: SQFCLG,S1,TERMLG,SSTERM          
+
+
+      IF(.NOT.FIRST) GO TO 10
+!
+!  SET UP FOR clebg, N!=EXP(FACLOG(N-1))
+!
+      FACLOG(1)=REAL(0,RC)
+      FACLOG(2)=REAL(0,RC) 
+      FN=REAL(1,RC)
+      DO N=3,max_table
+      FN=FN+REAL(1,RC) 
+      FACLOG(N)=FACLOG(N-1)+LOG(FN) 
+      END DO
+      FIRST = .FALSE.
+
+
+10    clebg8=REAL(0,RC)                                                       
+      IF(ID+IE-IF /= 0) GO TO 1000                                    
+      K1=IA+IB+IC                                                   
+      IF(K1-2*(K1/2) /= 0) GO TO 1000                                 
+      K1=IA+IB-IC                                                   
+      K2=IC-ABS(IB-IA)                                             
+      K3=MIN(K1,K2)                                                
+      IF(K3 < 0) GO TO 1000                                           
+      IF((-1)**(IB+IE) <  0) GO TO 1000                               
+      IF((-1)**(IC+IF) <  0) GO TO 1000                               
+      IF(IA-ABS(ID) < 0) GO TO 1000                                  
+      IF(IB-ABS(IE) < 0) GO TO 1000                                 
+      IF(IC-ABS(IF) < 0) GO TO 1000                                  
+      IF(IA == 0) GO TO 175                                                   
+      IF(IA > 0) GO TO 165        
+      GO TO 1000                                   
+  165 IF(IB == 0) GO TO 175                                                      
+      IF(IB > 0) GO TO 170                                           
+      GO TO 1000
+  170 IF(IC == 0) GO TO 180                                                   
+      IF(IC > 0) GO TO 250                                           
+      GO TO 1000
+  175 clebg8=REAL(1,RC)                                                       
+      GO TO 1000                                                    
+  180 FB=REAL(IB+1,RC)                                                       
+      clebg8=((-REAL(1,RC))**((IA-ID)/2))/ SQRT(FB)                         
+      GO TO 1000                                                    
+  250 FC2=REAL(IC+1,RC)                                                      
+      IABCP=(IA+IB+IC)/2+1                                          
+      IF(IABCP.GT.MAX_TABLE) GO TO 8000
+      IABC=IABCP-IC                                                 
+      IF(IABC.GT.MAX_TABLE) GO TO 8000
+      ICAB=IABCP-IB                                                 
+      IF(ICAB.GT.MAX_TABLE) GO TO 8000
+      IBCA=IABCP-IA                                                 
+      IF(IBCA.GT.MAX_TABLE) GO TO 8000
+      IAPD=(IA+ID)/2+1                                              
+      IF(IAPD.GT.MAX_TABLE) GO TO 8000
+      IAMD=IAPD-ID                                                  
+      IF(IAMD.GT.MAX_TABLE) GO TO 8000
+      IBPE=(IB+IE)/2+1                                              
+      IF(IBPE.GT.MAX_TABLE) GO TO 8000
+      IBME=IBPE-IE                                                  
+      IF(IBME.GT.MAX_TABLE) GO TO 8000
+      ICPF=(IC+IF)/2+1                                              
+      IF(ICPF.GT.MAX_TABLE) GO TO 8000
+      ICMF=ICPF-IF                                                  
+      IF(ICMF.GT.MAX_TABLE) GO TO 8000
+      SQFCLG=0.5  *(LOG(FC2)-FACLOG(IABCP+1) &                      
+           +FACLOG(IABC)+FACLOG(ICAB)+FACLOG(IBCA)  &               
+           +FACLOG(IAPD)+FACLOG(IAMD)+FACLOG(IBPE)   &              
+           +FACLOG(IBME)+FACLOG(ICPF)+FACLOG(ICMF))   
+      NZMIC2=(IB-IC-ID)/2                                           
+      NZMIC3=(IA-IC+IE)/2                                           
+      NZMI=MAX(0,NZMIC2,NZMIC3)+1                                  
+      NZMX=MIN(IABC,IAMD,IBPE)                                     
+      S1=REAL(1-2*MOD(NZMI-1,2) ,RC)                                         
+      DO  NZ=NZMI,NZMX                                           
+      IF(NZ.GT.MAX_TABLE) GO TO 8000
+      NZM1=NZ-1                                                     
+      NZT1=IABC-NZM1                                                
+      IF(NZT1.GT.MAX_TABLE) GO TO 8000
+      NZT2=IAMD-NZM1                                                
+      IF(NZT2.GT.MAX_TABLE) GO TO 8000
+      NZT3=IBPE-NZM1                                                
+      IF(NZT3.GT.MAX_TABLE) GO TO 8000
+      NZT4=NZ-NZMIC2                                                
+      IF(NZT4.GT.MAX_TABLE) GO TO 8000
+      NZT5=NZ-NZMIC3                                                
+      IF(NZT5.GT.MAX_TABLE) GO TO 8000
+      TERMLG=SQFCLG-FACLOG(NZ)-FACLOG(NZT1)-FACLOG(NZT2)    &        
+                -FACLOG(NZT3)-FACLOG(NZT4)-FACLOG(NZT5)            
+      SSTERM=S1* EXP(TERMLG)                                        
+      clebg8=clebg8+SSTERM                                                
+      S1=-S1
+      END DO                                                        
+                                    
+1000  RETURN                                                        
+8000  WRITE(6,8001)
+8001  FORMAT(1X,'INCREASE MAX_TABLE IN clebg')
+      STOP
+      END FUNCTION clebg8  
+
+end module Clebschg

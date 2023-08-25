@@ -1,0 +1,20 @@
+        if (min_cSNo < 0) then
+            open(unit=10, file=Nucleus//'.paa',err=1)
+            read(10,*,err=2,end=3) no_spart
+            if (no_spart>nopart) then
+                print *, ' Increase parameter max_no_partitions in module Parameters  or'
+                print *, ' SET PARTITIONS=',no_spart
+                stop
+            end if
+            do np=1,no_spart
+                read(10,*,err=2,end=3) spart(np)%shell(1:no_shells)
+            end do
+            close(10)
+            go to 50
+1           print *, ' Error opening ',Nucleus//'.paa'
+            stop
+2           print *, ' Error reading ',Nucleus//'.paa' 
+            stop                    
+3           print *, ' EOF reading ',Nucleus//'.paa' 
+            stop                    
+        end if

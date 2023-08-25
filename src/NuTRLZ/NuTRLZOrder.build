@@ -1,0 +1,12 @@
+..\NuCommon\NuCommon.f90
+..\NuCommonX\SOrder.F90
+..\NuCommon\NuModules.F90
+..\NuCommonX\NuCommonX.f90
+NuCoreXZ.f90
+/exe:NuTRLZ.exe
+ 
+/Openmp
+/STACK:1000000
+/LARGEADDRESSAWARE
+
+

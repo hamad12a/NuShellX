@@ -1,0 +1,238 @@
+interface dot
+    module procedure dot44,dot48,dot84,dot88,dot416,dot164,dot816,dot168,dot1616, &
+                     doti44,doti48,doti84,doti88,doti416,doti164,doti816,doti168,doti1616
+end interface dot
+
+interface orthogonalise
+    module procedure  orthogonalise4,orthogonalise8,orthogonalise16, &
+                      orthogonalisep4,orthogonalisep8,orthogonalisep16, &
+                      orthogonalisei4,orthogonalisei8,orthogonalisei16, &
+                      orthogonalisei4ii,orthogonalisei8ii,orthogonalisei16ii, &
+                      orthogonalise4ii,orthogonalise8ii,orthogonalise16ii
+end interface orthogonalise
+
+contains
+
+    
+    pure function dot1616(coef1,coef2,dim)
+    implicit none
+    real(kind=16)::dot1616
+    real(kind=16),dimension(:),intent(in):: coef1
+    real(kind=16),dimension(:),intent(in):: coef2
+    integer,intent(in)::dim
+    integer::i
+    dot1616=real(0,16)
+    do i=1,dim
+        dot1616=dot1616+coef1(i)*coef2(i)
+    end do
+    
+    end function dot1616
+
+    pure function dot416(coef1,coef2,dim)
+    implicit none
+    real(kind=16)::dot416
+    real(kind=4),dimension(:),intent(in):: coef1
+    real(kind=16),dimension(:),intent(in):: coef2
+    integer,intent(in)::dim
+    integer::i
+    dot416=real(0,16)
+    do i=1,dim
+        dot416=dot416+coef1(i)*coef2(i)
+    end do
+    
+    end function dot416
+            
+    pure function dot164(coef1,coef2,dim)
+    implicit none
+    real(kind=16)::dot164
+    real(kind=16),dimension(:),intent(in):: coef1
+    real(kind=4),dimension(:),intent(in):: coef2
+    integer,intent(in)::dim
+    integer::i
+    dot164=real(0,16)
+    do i=1,dim
+        dot164=dot164+coef1(i)*coef2(i)
+    end do
+    
+    end function dot164
+    
+    pure function dot816(coef1,coef2,dim)
+    implicit none
+    real(kind=16)::dot816
+    real(kind=8),dimension(:),intent(in):: coef1
+    real(kind=16),dimension(:),intent(in):: coef2
+    integer,intent(in)::dim
+    integer::i
+    dot816=real(0,16)
+    do i=1,dim
+        dot816=dot816+coef1(i)*coef2(i)
+    end do
+    
+    end function dot816
+            
+    pure function dot168(coef1,coef2,dim)
+    implicit none
+    real(kind=16)::dot168
+    real(kind=16),dimension(:),intent(in):: coef1
+    real(kind=8),dimension(:),intent(in):: coef2
+    integer,intent(in)::dim
+    integer::i
+    dot168=real(0,16)
+    do i=1,dim
+        dot168=dot168+coef1(i)*coef2(i)
+    end do
+    
+    end function dot168
+
+    pure subroutine orthogonalise16(n,vector,zz,dim)
+        implicit none
+        integer,intent(in):: n,dim
+        real(kind=16):: ovl
+        real(kind=16),intent(inout),dimension(:):: zz
+        real(kind=16),intent(in),dimension(:,:):: vector
+        integer:: i
+        do i=1,n
+            ovl=dot1616(vector(1:dim,i),zz(1:dim),dim)
+            zz(1:dim)=zz(1:dim)-ovl*vector(1:dim,i)
+        end do
+        
+    end subroutine orthogonalise16
+
+    pure subroutine orthogonalisep16(n,vector,zz,dim,ovl)
+        implicit none
+        integer,intent(in):: n,dim
+        real(kind=16),intent(out),dimension(:):: ovl
+        real(kind=16),intent(inout),dimension(:):: zz
+        real(kind=16),intent(in),dimension(:,:):: vector
+        integer:: i
+!$OMP PARALLEL PRIVATE(i)
+!$OMP DO        
+        do i=1,n
+            ovl(i)=dot1616(vector(1:dim,i),zz(1:dim),dim)
+        end do
+!$OMP END PARALLEL        
+        do i=1,n
+            zz(1:dim)=zz(1:dim)-ovl(i)*vector(1:dim,i)
+        end do
+        
+    end subroutine orthogonalisep16
+    
+    pure function doti1616(coef1,coef2,rnorm2,dim)
+    implicit none
+    real(kind=16)::doti1616
+    real(kind=16),dimension(:),intent(in):: coef1
+    real(kind=16),dimension(:),intent(in):: coef2
+    real(kind=16),dimension(:),intent(in):: rnorm2
+    integer,intent(in)::dim
+    integer::i
+    doti1616=real(0,16)
+    do i=1,dim
+        doti1616=doti1616+coef1(i)*coef2(i)*rnorm2(i)
+    end do
+    
+    end function doti1616
+    
+    pure function doti416(coef1,coef2,rnorm2,dim)
+    implicit none
+    real(kind=16)::doti416
+    real(kind=4),dimension(:),intent(in):: coef1
+    real(kind=16),dimension(:),intent(in):: coef2
+    real(kind=16),dimension(:),intent(in):: rnorm2
+    integer,intent(in)::dim
+    integer::i
+    doti416=real(0,16)
+    do i=1,dim
+        doti416=doti416+coef1(i)*coef2(i)*rnorm2(i)
+    end do
+    
+    end function doti416
+            
+    pure function doti164(coef1,coef2,rnorm2,dim)
+    implicit none
+    real(kind=16)::doti164
+    real(kind=16),dimension(:),intent(in):: coef1
+    real(kind=16),dimension(:),intent(in):: rnorm2
+    real(kind=4),dimension(:),intent(in):: coef2
+    integer,intent(in)::dim
+    integer::i
+    doti164=real(0,16)
+    do i=1,dim
+        doti164=doti164+coef1(i)*coef2(i)*rnorm2(i)
+    end do
+    
+    end function doti164
+    
+    pure function doti816(coef1,coef2,rnorm2,dim)
+    implicit none
+    real(kind=16)::doti816
+    real(kind=8),dimension(:),intent(in):: coef1
+    real(kind=16),dimension(:),intent(in):: coef2
+    real(kind=16),dimension(:),intent(in):: rnorm2
+    integer,intent(in)::dim
+    integer::i
+    doti816=real(0,16)
+    do i=1,dim
+        doti816=doti816+coef1(i)*coef2(i)*rnorm2(i)
+    end do
+    
+    end function doti816
+            
+    pure function doti168(coef1,coef2,rnorm2,dim)
+    implicit none
+    real(kind=16)::doti168
+    real(kind=16),dimension(:),intent(in):: coef1
+    real(kind=16),dimension(:),intent(in):: rnorm2
+    real(kind=8),dimension(:),intent(in):: coef2
+    integer,intent(in)::dim
+    integer::i
+    doti168=real(0,16)
+    do i=1,dim
+        doti168=doti168+coef1(i)*coef2(i)*rnorm2(i)
+    end do
+    
+    end function doti168
+
+    pure subroutine orthogonalisei16(n,vector,zz,rnorm2,dim)
+        implicit none
+        integer,intent(in):: n,dim
+        real(kind=16):: ovl
+        real(kind=16),intent(inout),dimension(:):: zz
+        real(kind=16),intent(in),dimension(:,:):: vector
+        real(kind=16),dimension(:),intent(in):: rnorm2
+        integer:: i
+        do i=1,n
+            ovl=doti1616(vector(1:dim,i),zz(1:dim),rnorm2(1:dim),dim)
+            zz(1:dim)=zz(1:dim)-ovl*vector(1:dim,i)
+        end do
+        
+    end subroutine orthogonalisei16
+    
+    pure subroutine orthogonalisei16ii(n,vector,zz,rnorm2,dim,ii)
+        implicit none
+        integer,intent(in):: n,dim,ii
+        real(kind=16):: ovl
+        real(kind=16),intent(inout),dimension(:):: zz
+        real(kind=16),intent(in),dimension(:,:,:):: vector
+        real(kind=16),dimension(:),intent(in):: rnorm2
+        integer:: i
+        do i=1,n
+            ovl=doti1616(vector(1:dim,ii,i),zz(1:dim),rnorm2(1:dim),dim)
+            zz(1:dim)=zz(1:dim)-ovl*vector(1:dim,ii,i)
+        end do
+        
+    end subroutine orthogonalisei16ii
+
+    pure subroutine orthogonalise16ii(n,vector,zz,dim,ii)
+        implicit none
+        integer,intent(in):: n,dim,ii
+        real(kind=16):: ovl
+        real(kind=16),intent(inout),dimension(:):: zz
+        real(kind=16),intent(in),dimension(:,:,:):: vector
+        integer:: i
+        do i=1,n
+            ovl=dot1616(vector(1:dim,ii,i),zz(1:dim),dim)
+            zz(1:dim)=zz(1:dim)-ovl*vector(1:dim,ii,i)
+        end do
+        
+    end subroutine orthogonalise16ii
+        

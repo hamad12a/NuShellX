@@ -1,0 +1,8 @@
+..\NuCommon\NuCommon.f90
+..\NuCommon\NuModules.F90
+..\NuCommonX\NuCommonX.f90
+..\NuCommonX\SOrder.F90
+NuTra.f90
+
+
+/Openmp

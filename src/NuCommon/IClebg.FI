@@ -1,0 +1,108 @@
+      FUNCTION clebg16(IA,IB,IC,ID,IE,IF)                                             
+      IMPLICIT NONE
+      integer,parameter::rc=16
+      LOGICAL:: FIRST=.TRUE.
+      REAL(KIND=RC):: clebg16,FN,FB,FC2
+      REAL(KIND=RC),DIMENSION(max_table):: FACLOG
+      INTEGER,INTENT(IN):: IA,IB,IC,ID,IE,IF                           
+      INTEGER:: N,K1,K2,K3,IABCP,IABC,IBCA,ICAB,IAMD,IAPD
+      INTEGER:: IBPE,IBME,ICPF,ICMF,NZMIC2,NZMIC3,NZMI,NZMX,NZ,NZM1,NZT1,NZT2,NZT3,NZT4,NZT5
+      REAL(KIND=RC):: SQFCLG,S1,TERMLG,SSTERM          
+
+
+      IF(.NOT.FIRST) GO TO 10
+!
+!  SET UP FOR clebg, N!=EXP(FACLOG(N-1))
+!
+      FACLOG(1)=REAL(0,RC)
+      FACLOG(2)=REAL(0,RC) 
+      FN=REAL(1,RC)
+      DO N=3,max_table
+      FN=FN+REAL(1,RC) 
+      FACLOG(N)=FACLOG(N-1)+LOG(FN) 
+      END DO
+      FIRST = .FALSE.
+
+
+10    clebg16=REAL(0,RC)                                                       
+      IF(ID+IE-IF /= 0) GO TO 1000                                    
+      K1=IA+IB+IC                                                   
+      IF(K1-2*(K1/2) /= 0) GO TO 1000                                 
+      K1=IA+IB-IC                                                   
+      K2=IC-ABS(IB-IA)                                             
+      K3=MIN(K1,K2)                                                
+      IF(K3 < 0) GO TO 1000                                           
+      IF((-1)**(IB+IE) <  0) GO TO 1000                               
+      IF((-1)**(IC+IF) <  0) GO TO 1000                               
+      IF(IA-ABS(ID) < 0) GO TO 1000                                  
+      IF(IB-ABS(IE) < 0) GO TO 1000                                 
+      IF(IC-ABS(IF) < 0) GO TO 1000                                  
+      IF(IA == 0) GO TO 175                                                   
+      IF(IA > 0) GO TO 165        
+      GO TO 1000                                   
+  165 IF(IB == 0) GO TO 175                                                      
+      IF(IB > 0) GO TO 170                                           
+      GO TO 1000
+  170 IF(IC == 0) GO TO 180                                                   
+      IF(IC > 0) GO TO 250                                           
+      GO TO 1000
+  175 clebg16=REAL(1,RC)                                                       
+      GO TO 1000                                                    
+  180 FB=REAL(IB+1,RC)                                                       
+      clebg16=((-REAL(1,RC))**((IA-ID)/2))/ SQRT(FB)                         
+      GO TO 1000                                                    
+  250 FC2=REAL(IC+1,RC)                                                      
+      IABCP=(IA+IB+IC)/2+1                                          
+      IF(IABCP.GT.MAX_TABLE) GO TO 8000
+      IABC=IABCP-IC                                                 
+      IF(IABC.GT.MAX_TABLE) GO TO 8000
+      ICAB=IABCP-IB                                                 
+      IF(ICAB.GT.MAX_TABLE) GO TO 8000
+      IBCA=IABCP-IA                                                 
+      IF(IBCA.GT.MAX_TABLE) GO TO 8000
+      IAPD=(IA+ID)/2+1                                              
+      IF(IAPD.GT.MAX_TABLE) GO TO 8000
+      IAMD=IAPD-ID                                                  
+      IF(IAMD.GT.MAX_TABLE) GO TO 8000
+      IBPE=(IB+IE)/2+1                                              
+      IF(IBPE.GT.MAX_TABLE) GO TO 8000
+      IBME=IBPE-IE                                                  
+      IF(IBME.GT.MAX_TABLE) GO TO 8000
+      ICPF=(IC+IF)/2+1                                              
+      IF(ICPF.GT.MAX_TABLE) GO TO 8000
+      ICMF=ICPF-IF                                                  
+      IF(ICMF.GT.MAX_TABLE) GO TO 8000
+      SQFCLG=0.5  *(LOG(FC2)-FACLOG(IABCP+1) &                      
+           +FACLOG(IABC)+FACLOG(ICAB)+FACLOG(IBCA)  &               
+           +FACLOG(IAPD)+FACLOG(IAMD)+FACLOG(IBPE)   &              
+           +FACLOG(IBME)+FACLOG(ICPF)+FACLOG(ICMF))   
+      NZMIC2=(IB-IC-ID)/2                                           
+      NZMIC3=(IA-IC+IE)/2                                           
+      NZMI=MAX(0,NZMIC2,NZMIC3)+1                                  
+      NZMX=MIN(IABC,IAMD,IBPE)                                     
+      S1=REAL(1-2*MOD(NZMI-1,2) ,RC)                                         
+      DO  NZ=NZMI,NZMX                                           
+      IF(NZ.GT.MAX_TABLE) GO TO 8000
+      NZM1=NZ-1                                                     
+      NZT1=IABC-NZM1                                                
+      IF(NZT1.GT.MAX_TABLE) GO TO 8000
+      NZT2=IAMD-NZM1                                                
+      IF(NZT2.GT.MAX_TABLE) GO TO 8000
+      NZT3=IBPE-NZM1                                                
+      IF(NZT3.GT.MAX_TABLE) GO TO 8000
+      NZT4=NZ-NZMIC2                                                
+      IF(NZT4.GT.MAX_TABLE) GO TO 8000
+      NZT5=NZ-NZMIC3                                                
+      IF(NZT5.GT.MAX_TABLE) GO TO 8000
+      TERMLG=SQFCLG-FACLOG(NZ)-FACLOG(NZT1)-FACLOG(NZT2)    &        
+                -FACLOG(NZT3)-FACLOG(NZT4)-FACLOG(NZT5)            
+      SSTERM=S1* EXP(TERMLG)                                        
+      clebg16=clebg16+SSTERM                                                
+      S1=-S1
+      END DO                                                        
+                                    
+1000  RETURN                                                        
+8000  WRITE(6,8001)
+8001  FORMAT(1X,'INCREASE MAX_TABLE IN clebg')
+      STOP
+      END FUNCTION clebg16                                                          
